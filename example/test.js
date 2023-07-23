@@ -1,7 +1,5 @@
 import * as fs from '../src/es6.js'
-import tests from '../test/test.js'
 import {
-  cleanupSandboxedFileSystem,
   getDirectoryEntryCount,
   assert,
   capture
@@ -28,53 +26,12 @@ if (!Blob.prototype.text) {
   }
 }
 
+globalThis.showOpenFilePicker = showOpenFilePicker;
+globalThis.showSaveFilePicker = showSaveFilePicker;
+globalThis.getOriginPrivateDirectory = getOriginPrivateDirectory;
+globalThis.showDirectoryPicker = showDirectoryPicker;
+
 let err
-const tBody = document.querySelector('#table').tBodies[0]
-
-/** @param {{desc: string}} n */
-function t (n) {
-  const tr = tBody.insertRow()
-  const td = tr.insertCell()
-  td.innerText = n.desc
-  tr.insertCell()
-  tr.insertCell()
-  tr.insertCell()
-  tr.insertCell()
-  tr.insertCell()
-}
-
-tests.forEach(t)
-
-function tt (n, html) {
-  const tr = manualTest.tBodies[0].insertRow()
-  tr.insertCell().innerText = n
-  tr.insertCell().appendChild(html())
-}
-
-function dt (files) {
-  const b = new ClipboardEvent('').clipboardData || new DataTransfer()
-  for (let i = 0, len = files.length; i < len; i++) b.items.add(files[i])
-  return b
-}
-
-try {
-  if (DataTransferItem.prototype.getAsFileSystemHandle.toString().includes('native')) {
-    throw new Error("Don't work with mocked data")
-  }
-
-  const dataTransfer = dt([
-    new File(['content'], 'sample1.txt'),
-    new File(['abc'], 'sample2.txt')
-  ])
-
-  // https://github.com/WICG/file-system-access/pull/192#issuecomment-847426013
-  for (const item of dataTransfer.items) {
-    item.getAsFileSystemHandle().then(handle => {
-      assert(handle.kind === 'file')
-      assert(handle[Symbol.toStringTag] === 'FileSystemFileHandle')
-    })
-  }
-} catch (err) {}
 
 // get some dummy gradient image
 function img (format) {
@@ -91,27 +48,6 @@ function img (format) {
   })
 }
 
-$types1.value = JSON.stringify([
-  {
-    description: 'Text Files',
-    accept: {
-      'text/plain': ['.txt', '.text'],
-      'text/html': ['.html', '.htm']
-    }
-  },
-  {
-    description: 'Images',
-    accept: {
-      'image/*': ['.png', '.gif', '.jpeg', '.jpg']
-    }
-  }
-], null, 2)
-
-$types2.value = JSON.stringify([
-  { accept: { 'image/jpg': ['.jpg'] } },
-  { accept: { 'image/png': ['.png'] } },
-  { accept: { 'image/webp': ['.webp'] } }
-], null, 2)
 
 form_showDirectoryPicker.onsubmit = evt => {
   evt.preventDefault()
@@ -134,9 +70,6 @@ form_showOpenFilePicker.onsubmit = evt => {
     alert(err)
   })
 }
-window.showSaveFilePicker = function(){
-  console.log(1355)
-}
 form_showSaveFilePicker.onsubmit = async evt => {
   evt.preventDefault()
   /** @type {Object<string, *>} */
@@ -151,42 +84,6 @@ form_showSaveFilePicker.onsubmit = async evt => {
   await ws.close()
 }
 
-async function init () {
-  const drivers = await Promise.allSettled([
-    getOriginPrivateDirectory(),
-    getOriginPrivateDirectory(import('../src/adapters/sandbox.js')),
-    getOriginPrivateDirectory(import('../src/adapters/memory.js')),
-    getOriginPrivateDirectory(import('../src/adapters/indexeddb.js')),
-    getOriginPrivateDirectory(import('../src/adapters/cache.js'))
-  ])
-  let j = 0
-  for (const driver of drivers) {
-    j++
-    if (driver.status === 'rejected') {
-      console.error('Driver failed to load:' + driver.reason)
-      continue
-    }
-    const root = driver.value
-    await cleanupSandboxedFileSystem(root)
-    const total = performance.now()
-    for (var i = 0; i < tests.length; i++) {
-      const test = tests[i]
-      await cleanupSandboxedFileSystem(root)
-      const t = performance.now()
-      await test.fn(root).then(() => {
-        const time = (performance.now() - t).toFixed(3)
-        tBody.rows[i].cells[j].innerText = time + 'ms'
-      }, err => {
-        console.error(err)
-        tBody.rows[i].cells[j].innerText = '❌'
-        tBody.rows[i].cells[j].title = err.message
-      })
-    }
-    table.tFoot.rows[0].cells[j].innerText = (performance.now() - total).toFixed(3)
-  }
-}
-
-init().catch(console.error)
 
 globalThis.ondragover = evt => evt.preventDefault()
 globalThis.ondrop = async evt => {
