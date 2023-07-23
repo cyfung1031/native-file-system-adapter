@@ -134,6 +134,9 @@ form_showOpenFilePicker.onsubmit = evt => {
     alert(err)
   })
 }
+window.showSaveFilePicker = function(){
+  console.log(1355)
+}
 form_showSaveFilePicker.onsubmit = async evt => {
   evt.preventDefault()
   /** @type {Object<string, *>} */
